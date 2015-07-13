@@ -111,6 +111,14 @@ shift
 cmd="$1"
 shift
 
+dir="${ICI_LIB_DIR}/$cmd.d"
+
+if ! test -d "$dir"; then
+    echo "$self: unknown command '$cmd'" 1>&2
+    echo "Try 'ici --help' for more information." 1>&2
+    exit 1
+fi
+
 _trap ()
 {
    err=$?
@@ -125,16 +133,9 @@ _trap ()
    exit $err
 }
 
-dir="${ICI_LIB_DIR}/$cmd.d"
 cfg=`mktemp`
 log=`mktemp`
 trap '_trap $cfg $log' EXIT
-
-if ! test -d "$dir"; then
-    echo "$self: unknown command '$cmd'" 1>&2
-    echo "Try 'ici --help' for more information." 1>&2
-    exit 1
-fi
 
 parts=$(echo `find $dir/ -mindepth 1 -maxdepth 1 \
     -type f -o -type l -executable -name '[0-9]*' \! -name \*~ | sort`)
