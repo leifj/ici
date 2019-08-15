@@ -43,10 +43,10 @@ while [ 1 ]; do
     ici -v "${ICI_CA_NAME}" issue -d ${ICI_ISSUE_DAYS} -t client -- "${req_dir}/client/"
     ici -v "${ICI_CA_NAME}" issue -d ${ICI_ISSUE_DAYS} -t peer -- "${req_dir}/peer/"
 
-    if [ "x${ICI_PUBLISH_GIT_REPO}" ]; then
+    if [ "x${ICI_PUBLISH_GIT_REPO}" != "x" ]; then
 	ici -v "${ICI_CA_NAME}" publish git "${ICI_PUBLISH_GIT_REPO}"
     fi
-    if [ "x${ICI_PUBLISH_HTML_DIR}" ]; then
+    if [ "x${ICI_PUBLISH_HTML_DIR}" != "x" ]; then
 	ici -v "${ICI_CA_NAME}" publish html "${ICI_PUBLISH_HTML_DIR}"
     fi
     ici -v "${ICI_CA_NAME}" publish req-resp "${ICI_CA_ROOT}/${ICI_CA_NAME}/out-certs"
