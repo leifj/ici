@@ -1,4 +1,7 @@
-FROM debian:stable AS build
+# Use debian:stretch here, because with the SUNET Yubikey setup, the openssl engine can't be
+# greater than 0.4.6 (the Yubikey has CKA_ALWAYS_AUTHENTICATE set, which breaks ICI usage).
+#   https://bugzilla.redhat.com/show_bug.cgi?id=1728016
+FROM debian:stretch AS build
 ARG VERSION
 
 ENV DEBIAN_FRONTEND noninteractive
@@ -16,7 +19,10 @@ RUN rm -rf ca .git
 RUN dpkg-buildpackage -b
 RUN find /build -type f -name '*.deb' -ls
 
-FROM debian:stable
+# Use debian:stretch here, because with the SUNET Yubikey setup, the openssl engine can't be
+# greater than 0.4.6 (the Yubikey has CKA_ALWAYS_AUTHENTICATE set, which breaks ICI usage).
+#   https://bugzilla.redhat.com/show_bug.cgi?id=1728016
+FROM debian:stretch
 ARG VERSION
 COPY --from=build /build/ici_${VERSION}-*.deb /build/revision.txt /
 COPY scripts/inotify_issue_and_publish.sh /
@@ -24,12 +30,12 @@ COPY scripts/init_softhsm_ca.sh /
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get -y update && apt-get -y install \
-    inotify-tools \
     git \
+    inotify-tools \
     libengine-pkcs11-openssl1.1 \
     opensc \
-    procps \
     openssl \
+    procps \
     softhsm2 \
     usbutils
 RUN ls -l /ici_${VERSION}-*.deb
