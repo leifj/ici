@@ -32,16 +32,29 @@ if [[ $ICI_START_PCSCD ]]; then
     /usr/sbin/pcscd
 fi
 
-while [ 1 ]; do
-    # Wait for a new CSR to appear in any of the three request directories.
-    # NOTE: This is a simple example - if another CSR appears while issuing and publishing
-    #       below, the next iteration of the while ĺoop won't trigger on that second CSR,
-    #       since it is already in the request directory when this inotifywait command sets up.
-    inotifywait -q -e close_write -e moved_to "${req_dir}"/{server,client,peer}
+# By setting waitpid to nothing here, the while loop will run once immediately at the startup of this service
+waitpid=''
 
-    ici -v "${ICI_CA_NAME}" issue -d ${ICI_ISSUE_DAYS} -t server -- "${req_dir}/server/"
+while [ 1 ]; do
+    # Wait for the inotifywait started into the background by the last iteration of this loop (if any)
+    if [ "x${waitpid}" != "x" ]; then
+	wait $waitpid
+    fi
+    # Start a new inotifywait as soon as possible after the previous one terminates.
+    # If this inofitywait terminates while we're issuing and publishing certificates below,
+    # the 'wait' above will fall through immediately on the next iteration and we will
+    # perform a new issue/publish right away. This minimises the window where we would miss
+    # new events, but does not completely remove it. Don't know if perfection can be
+    # achieved here using only shell commands.
+    inotifywait -q -e close_write -e moved_to --exclude 'txt$' "${req_dir}"/{server,client,peer} &
+    waitpid=$!
+
+    # Adding -d to one of these invocations logs the openssl config contents once
+    ici -d -v "${ICI_CA_NAME}" issue -d ${ICI_ISSUE_DAYS} -t server -- "${req_dir}/server/"
     ici -v "${ICI_CA_NAME}" issue -d ${ICI_ISSUE_DAYS} -t client -- "${req_dir}/client/"
     ici -v "${ICI_CA_NAME}" issue -d ${ICI_ISSUE_DAYS} -t peer -- "${req_dir}/peer/"
+
+    ici -v "${ICI_CA_NAME}" publish req-resp "${ICI_CA_ROOT}/${ICI_CA_NAME}/out-certs"
 
     if [ "x${ICI_PUBLISH_GIT_REPO}" != "x" ]; then
 	ici -v "${ICI_CA_NAME}" publish git "${ICI_PUBLISH_GIT_REPO}"
@@ -49,7 +62,6 @@ while [ 1 ]; do
     if [ "x${ICI_PUBLISH_HTML_DIR}" != "x" ]; then
 	ici -v "${ICI_CA_NAME}" publish html "${ICI_PUBLISH_HTML_DIR}"
     fi
-    ici -v "${ICI_CA_NAME}" publish req-resp "${ICI_CA_ROOT}/${ICI_CA_NAME}/out-certs"
 
     ici -v "${ICI_CA_NAME}" report
 done
