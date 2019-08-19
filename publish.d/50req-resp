@@ -24,7 +24,11 @@ PUBDIR="$1"
 test -d "${PUBDIR}" || git init "${PUBDIR}"
 
 cat "${ICI_CA_DIR}/index.txt" | while read -r status date serial foo dn; do
-    input_fn="`cat $ICI_CA_DIR/serial_db.txt | grep -i "^${serial};" | cut -d ";" -f 2`"
+    input_fn="`grep -i "^${serial}" "${ICI_CA_DIR}/serial_db.txt" | cut -d ";" -f 2`"
+    if [ "x${input_fn}" = "x" ]; then
+	echo "$0: Serial ${serial} not found in database (${ICI_CA_DIR}/serial_db.txt)"
+	continue
+    fi
     output_fn="`basename $input_fn | sed -e 's/.csr$/.pem/'`"
 
     if [ "x${output_fn}" = "x" ]; then
